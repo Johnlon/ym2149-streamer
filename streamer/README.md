@@ -9,11 +9,19 @@ The script build.bat will build the program "ym.exe".
 Unpack the compressed "YM" file using 7Zip (for example) before using this streamer and inside it you'll find a file called something with a "YM" suffix too.
 Use this file as the data for the streamer.
 
+Build it
+--------
+
+I built it using Go on Windows.
+
+   build.bat
+
 
 Example usage
 ---------
 
-  $ ./ym.exe --com com5 stream TheJetsons.YM
+  ym.exe --com com5 stream TheJetsons.YM
+
   Data for TheJetsons.YM = 61792
 
   FrameCount 3862
