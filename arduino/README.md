@@ -35,6 +35,8 @@ Do on Windows.
 
 A Windows copy of 'avrdude' is sitting in this dir for convenience and program.bat is configured to upload the hex file to an Arduino nano.
 
+Find out what Comm port your Arduino is on and edit program.bat accordingly.
+
     $ program.bat
 
 
