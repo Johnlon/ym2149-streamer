@@ -28,7 +28,8 @@ Streamer
 ------
 
 The streamer component present in https://github.com/FlorentFlament/ym2149-streamer/ didn't work at all for me and so I wrote an alternative using Go.
-This has been tested on Windows.
+
+This has been tested on Windows and the YM.exe program can be run directly from WSL2 just by including the .exe extension.
 
 
 

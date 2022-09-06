@@ -13,5 +13,13 @@ Use this file as the data for the streamer.
 Example usage
 ---------
 
-   $ ym  --com COM5 stream ChipTuneFile.YM
+  $ ./ym.exe --com com5 stream TheJetsons.YM
+  Data for TheJetsons.YM = 61792
 
+  FrameCount 3862
+  2022/09/06 01:22:59 Starting with port com5 at baud rate 115200
+  2022/09/06 01:22:59 Opened com5
+  2022/09/06 01:22:59 Writing com5
+  2022/09/06 01:23:02 Playing 00:01 of 01:17
+  2022/09/06 01:23:04 Playing 00:02 of 01:17
+  2022/09/06 01:23:05 Playing 00:03 of 01:17
