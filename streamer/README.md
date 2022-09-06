@@ -9,6 +9,11 @@ The script build.bat will build the program "ym.exe".
 Unpack the compressed "YM" file using 7Zip (for example) before using this streamer and inside it you'll find a file called something with a "YM" suffix too.
 Use this file as the data for the streamer.
 
+Editing
+--------
+
+VSCode works pretty well with the go plugin, but I go the build and run from the command line.
+
 Build it
 --------
 
