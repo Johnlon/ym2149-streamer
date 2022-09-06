@@ -1,13 +1,17 @@
 ym2149-streamer
 ===========
 
+Should also work for ay3-8913 / ay3-8910 chips.
+
 Adapted to work on Windows and WSL2.
+
+This project provides a means to stream "YM" ChipTune files at a YM2149/AY3-8910 chip via an Arduino adapter that provides USB connectivity.
 
 There are two parts to the project 
 
-- an (arduino)[arduino] component that listens for messages on the USB Comm port and then writes these to a YM2149 chip
+- an Arduino adaptor component that listens for messages on the USB Comm port and then writes these to a YM2149 chip
 
-- a Windows (golang) component that reads "YM" formatted files and streams them to the Arduino
+- a Windows (golang) Streamer component that reads "YM" formatted files and streams them to the Arduino via a USB Comms port
 
 
 Arduino
@@ -20,7 +24,7 @@ I found that the program seemed to work in Py2 on Linux but not at all on Window
 So the instructions in the Arduino submodule explain building the sketch using a commment line compiler (no need for Arduino IDE) in Linux and then flashing the Ardino using Windows.
 
 
-Windows
+Streamer
 ------
 
 The streamer component present in https://github.com/FlorentFlament/ym2149-streamer/ didn't work at all for me and so I wrote an alternative using Go.
