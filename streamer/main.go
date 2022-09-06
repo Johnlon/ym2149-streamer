@@ -26,8 +26,10 @@ import (
 	"log"
 	"os"
 	"time"
-        "github.com/tarm/serial"
+
 	"github.com/nguillaumin/ymtool/ym"
+	"github.com/tarm/serial"
+	"go.bug.st/serial.v1/enumerator"
 )
 
 const exitCodeCmdParsing = 1
@@ -37,14 +39,19 @@ const exitCodeUnsupportedVersion = 3
 // Command Line Args
 // EX: ./serial -com=COM3 -baud=115200
 var (
-  com  string
-  baud int;
+	com  string
+	baud int
 )
 
 // Set Defaults
 func init() {
-  flag.StringVar(&com, "com", "COM3", "The COM port to read data from")
-  flag.IntVar(&baud, "baud", 115200, "The Baud Rate")
+	ports := eports()
+	var port = "COM1"
+	if len(ports) == 1 {
+		port = ports[0].Name
+	}
+	flag.StringVar(&com, "com", port, "The COM port to write data to")
+	flag.IntVar(&baud, "baud", 115200, "The Baud Rate")
 }
 
 func main() {
@@ -72,7 +79,7 @@ func main() {
 func Usage() {
 	fmt.Println("YM Tool")
 	fmt.Println("")
-	fmt.Println("Usage: ymtool <command> [arg...]")
+	fmt.Println("Usage: ym <command> [arg...]")
 	fmt.Println("")
 
 	fmt.Println("Available commands:")
@@ -105,11 +112,17 @@ func Usage() {
 }
 
 func StreamCmd() {
+	ports := eports()
+	if ports == nil {
+		fmt.Println("No serial ports found!")
+		os.Exit(exitCodeCmdParsing)
+	}
+
 	if len(flag.Args()) < 2 {
 
-		fmt.Println("YM Tool - Show information about a song")
+		fmt.Println("YM Tool - Stream a song")
 		fmt.Println("")
-		fmt.Println("Usage: ymtool stream <file.ym>")
+		fmt.Println("Usage: ym stream <file.ym>")
 
 		os.Exit(exitCodeCmdParsing)
 	}
@@ -226,7 +239,7 @@ func InfoCmd() {
 
 		fmt.Println("YM Tool - Show information about a song")
 		fmt.Println("")
-		fmt.Println("Usage: ymtool info <file.ym>")
+		fmt.Println("Usage: ym info <file.ym>")
 
 		os.Exit(exitCodeCmdParsing)
 	}
@@ -247,22 +260,24 @@ func InfoCmd() {
 	fmt.Println(ymFile.Header)
 }
 
-func openCom() (*serial.Port) {
+func openCom() *serial.Port {
 
-  flag.Parse()
+	flag.Parse()
 
-  // Program Info
-  log.Printf("Starting with port %s at baud rate %d", com, baud)
+	// Program Info
+	log.Printf("Starting with port %s at baud rate %d", com, baud)
 
-  // Setup Serial Port
-  c := &serial.Config{Name: com, Baud: baud}
-  s, err := serial.OpenPort(c)
-  if err != nil {
-    log.Fatal(err)
-  }
+	// Setup Serial Port
+	c := &serial.Config{Name: com, Baud: baud}
+	s, err := serial.OpenPort(c)
+	if err != nil {
+		fmt.Printf("Cannot open port: %s\n", com)
+		listPorts()
+		log.Fatal(err, " : ", com)
+	}
 
-  log.Printf("Opened %s", com)
-  return s
+	log.Printf("Opened %s", com)
+	return s
 }
 
 func min(a, b int) int {
@@ -270,4 +285,43 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+/*
+func ports() {
+	ports, err := serial.GetPortsList()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(ports) == 0 {
+		log.Fatal("No serial ports found!")
+	}
+	for _, port := range ports {
+		fmt.Printf("Found port: %v\n", port)
+	}
+}
+*/
+
+func eports() []*enumerator.PortDetails {
+
+	ports, err := enumerator.GetDetailedPortsList()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(ports) == 0 {
+		return nil
+	}
+	return ports
+}
+
+func listPorts() {
+	ports := eports()
+
+	for _, port := range ports {
+		fmt.Printf("Found port: %s\n", port.Name)
+		if port.IsUSB {
+			fmt.Printf("   USB ID     %s:%s\n", port.VID, port.PID)
+			fmt.Printf("   USB serial %s\n", port.SerialNumber)
+		}
+	}
 }
