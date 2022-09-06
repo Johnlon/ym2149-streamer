@@ -1,2 +1,4 @@
-rem go build -v -o ymtool-windows_amd64-master.exe
+rem deps downloaded to GOPATH
+go install 
+
 go build -v -o ym.exe
