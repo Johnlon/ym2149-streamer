@@ -159,26 +159,6 @@ func StreamCmd() {
 	frameCount := int(ymFile.Header.FrameCount)
 	fmt.Printf("FrameCount %d\n", frameCount)
 
-	mask := [16]byte{ // see datasheet
-		0b11111111,
-		0b00001111,
-		0b11111111,
-		0b00001111,
-		0b11111111,
-		0b00001111,
-		0b00011111,
-		0b11111111,
-		0b00011111,
-		0b00011111,
-		0b00011111,
-		0b11111111,
-		0b11111111,
-		0b00001111,
-		0b11111111,
-		0b11111111,
-
-	}
-
 	var dataByFrame [][16]byte
 	if isInterleaved {
 
@@ -197,9 +177,9 @@ func StreamCmd() {
 			var frameData[16]byte
 
 			for regNo := 0; regNo < 16; regNo++ {
-				var regByte = regBlocks[regNo][frameNo] & mask[regNo]
+				var regByte = regBlocks[regNo][frameNo]
 				if regNo == 7 {
-					// make IO port input
+					// force IO ports as input - save power??
 					regByte = regByte | 0b11000000
 				}
 				frameData[regNo] = regByte
