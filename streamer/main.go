@@ -196,7 +196,7 @@ func StreamCmd() {
 	// http://leonard.oxg.free.fr/ymformat.html
 	// ftp://ftp.modland.com/pub/documents/format_documentation/Atari%20ST%20Sound%20Chip%20Emulator%20YM1-6%20(.ay,%20.ym).txt
 	port := openCom()
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second) // time for arduino to reset on USB connection 
 
 	log.Printf("Writing %s", com)
 
