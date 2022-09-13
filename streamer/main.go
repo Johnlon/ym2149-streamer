@@ -37,7 +37,7 @@ const exitCodeIOError = 2
 const exitCodeUnsupportedVersion = 3
 
 // Command Line Args
-// EX: ./serial -com=COM3 -baud=115200
+// EX: ./serial -com=COM3 -baud=57600
 var (
 	com  string
 	baud int
@@ -51,7 +51,7 @@ func init() {
 		port = ports[0].Name
 	}
 	flag.StringVar(&com, "com", port, "The COM port to write data to")
-	flag.IntVar(&baud, "baud", 115200, "The Baud Rate")
+	flag.IntVar(&baud, "baud", 57600, "The Baud Rate")
 }
 
 func main() {
@@ -64,6 +64,8 @@ func main() {
 
 	command := flag.Arg(0)
 	switch command {
+	case "port":
+		PortCmd()
 	case "stream":
 		StreamCmd()
 	case "info":
@@ -83,6 +85,7 @@ func Usage() {
 	fmt.Println("")
 
 	fmt.Println("Available commands:")
+	fmt.Println("  port                       : Looks for a single port print to console")
 	fmt.Println("  stream <file.ym>           : Stream YM file over the USB/Comm port")
 	fmt.Println("  info <file.ym>             : Get metadata of a YM file")
 	fmt.Println("")
@@ -153,29 +156,58 @@ func StreamCmd() {
 	// and changes this so that the data is reorganised frame by frame so we have R0,R1.. of frame 0 then the same of frame 1 and so on.
 	// ******************
 
-	var frameCount int
-	frameCount = int(ymFile.Header.FrameCount)
+	frameCount := int(ymFile.Header.FrameCount)
 	fmt.Printf("FrameCount %d\n", frameCount)
 
-	var dataByFrame []byte
+	mask := [16]byte{ // see datasheet
+		0b11111111,
+		0b00001111,
+		0b11111111,
+		0b00001111,
+		0b11111111,
+		0b00001111,
+		0b00011111,
+		0b11111111,
+		0b00011111,
+		0b00011111,
+		0b00011111,
+		0b11111111,
+		0b11111111,
+		0b00001111,
+		0b11111111,
+		0b11111111,
+
+	}
+
+	var dataByFrame [][16]byte
 	if isInterleaved {
 
 		// split to 16 equal chunks sequentially
-		var regBlocks [][]byte
-		for i := 0; i < len(ymFile.Frames); i += frameCount {
-			regData := ymFile.Frames[i:min(i+frameCount, len(ymFile.Frames))]
-			regBlocks = append(regBlocks, regData)
+		var regBlocks [16][]byte
+		//for i := 0; i < len(ymFile.Frames); i += frameCount {
+		for reg := 0; reg < 16; reg++ {
+			start := reg*frameCount
+			regData := ymFile.Frames[start:start+frameCount]
+			//regBlocks = append(regBlocks, regData)
+			regBlocks[reg] = regData
 		}
 
 		// zip together
-		for j := 0; j < frameCount; j++ {
-			for i := 0; i < 16; i++ {
-				b := regBlocks[i][j]
-				dataByFrame = append(dataByFrame, b)
+		for frameNo := 0; frameNo < frameCount; frameNo++ {
+			var frameData[16]byte
+
+			for regNo := 0; regNo < 16; regNo++ {
+				var regByte = regBlocks[regNo][frameNo] & mask[regNo]
+				if regNo == 7 {
+					// make IO port input
+					regByte = regByte | 0b11000000
+				}
+				frameData[regNo] = regByte
 			}
+			dataByFrame = append(dataByFrame, frameData)
 		}
 	} else {
-		dataByFrame = ymFile.Frames
+		os.Exit(1)
 	}
 
 	//***************************
@@ -184,45 +216,64 @@ func StreamCmd() {
 	// http://leonard.oxg.free.fr/ymformat.html
 	// ftp://ftp.modland.com/pub/documents/format_documentation/Atari%20ST%20Sound%20Chip%20Emulator%20YM1-6%20(.ay,%20.ym).txt
 	port := openCom()
+	time.Sleep(2 * time.Second)
+
 	log.Printf("Writing %s", com)
 
 	// connecting USB I think does a reset - so give a little pause for that to occur
-	time.Sleep(2 * time.Second)
 
 	// send data
 	frameStart := time.Now()
 	frameRate := ymFile.Header.PlayerFrame
-	frameLengthMs := float64((1 / float64(frameRate)) * 1000)
-	byteSendLengthMs := frameLengthMs / 16
+	frameDurationMs := float64((1 / float64(frameRate)) * 1000)
 
-	timeSecs := ymFile.Header.FrameCount / uint32(ymFile.Header.PlayerFrame)
-	song_mins := timeSecs / 60
-	song_secs := timeSecs % 60
+	//timeSecs := ymFile.Header.FrameCount / uint32(ymFile.Header.PlayerFrame)
+	//song_mins := timeSecs / 60
+	//song_secs := timeSecs % 60
 
-	last_sec := 0
+	//last_sec := 0
 
-	for j := 0; j < len(dataByFrame); j++ {
-		elapsedMs := time.Now().Sub(frameStart).Milliseconds()
-		remainingMs := byteSendLengthMs - float64(elapsedMs)
 
-		NanoSleep(time.Duration(remainingMs) * time.Millisecond)
+//		fmt.Printf("r%-2d=%08b ", regNo, b);
+	for frameNo := 0; frameNo < frameCount; frameNo++ {
 		frameStart = time.Now()
 
-		b := []byte{dataByFrame[j]}
-		port.Write(b)
+		frameData := dataByFrame[frameNo] 
+		slice := frameData[:]
+		port.Write(slice)
 		port.Flush()
 
-		e_timeSecs := (j / 16) / int(frameRate)
-		mins := e_timeSecs / 60
-		secs := e_timeSecs % 60
-
-		if last_sec != secs {
-			log.Printf("Playing %02d:%02d of %02d:%02d\n", mins, secs, song_mins, song_secs)
+		for regNo:=0; regNo<16; regNo++ {
+			fmt.Printf("%08b ", frameData[regNo])
 		}
-		last_sec = secs
+		fmt.Printf("\n")
+
+		elapsedMs := time.Now().Sub(frameStart).Milliseconds()
+		remainingMs := frameDurationMs - float64(elapsedMs)
+		NanoSleep(time.Duration(remainingMs) * time.Millisecond)
+
+		// print frame rate
+		/*
+		if 1==2 && last_sec != secs {
+			e_timeSecs := (frameNo) / int(frameRate)
+			mins := e_timeSecs / 60
+			secs := e_timeSecs % 60
+			log.Printf("Playing %02d:%02d of %02d:%02d\n", mins, secs, song_mins, song_secs)
+			last_sec = secs
+		}
+		*/
+
 	}
 	port.Close()
 
+}
+
+func PortCmd() {
+	ports := eports()
+	if ports == nil {
+		os.Exit(exitCodeCmdParsing)
+	}
+	fmt.Println(ports[0].Name)
 }
 
 // spin wait as it's more accurate than sleep
